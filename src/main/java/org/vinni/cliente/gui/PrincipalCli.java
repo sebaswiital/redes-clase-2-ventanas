@@ -41,9 +41,21 @@ public class PrincipalCli extends javax.swing.JFrame {
         mensajeTxt = new javax.swing.JTextField();
         jLabel2 = new javax.swing.JLabel();
         btEnviar = new javax.swing.JButton();
+        iPtxt = new javax.swing.JTextField();
+        tituloip = new javax.swing.JLabel();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         getContentPane().setLayout(null);
+
+        tituloip.setText("Ingrese IP del servidor con puntos");
+        tituloip.setFont(new java.awt.Font("Tahoma", 1, 10));
+        tituloip.setBounds(40, 60, 250, 17);
+        getContentPane().add(tituloip);
+
+        iPtxt.setBounds(40, 40, 110, 20);
+        iPtxt.setColumns(10);
+        iPtxt.setFont(new java.awt.Font("Verdana", 0, 14));
+        getContentPane().add(iPtxt);
 
         bConectar.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
         bConectar.setText("CONECTAR CON SERVIDOR");
@@ -114,7 +126,6 @@ public class PrincipalCli extends javax.swing.JFrame {
         });
     }
 
-    // Variables declaration - do not modify
     private javax.swing.JButton bConectar;
     private javax.swing.JButton btEnviar;
     private javax.swing.JLabel jLabel1;
@@ -122,13 +133,19 @@ public class PrincipalCli extends javax.swing.JFrame {
     private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JTextArea mensajesTxt;
     private JTextField mensajeTxt;
-    // End of variables declaration
+    private javax.swing.JTextField iPtxt;
+    private javax.swing.JLabel tituloip;
+
+
 
     private void conectar() {
         JOptionPane.showMessageDialog(this, "Conectando con servidor");
+        //cree esta variable que lee la caja de texto que cree en jframe para que podamos ejecutar este cliente en cualquier maquina y poder editar la ip
+        //que no sea siempre "localhost"
+        String ip = iPtxt.getText();
         try {
             if (socket == null || socket.isClosed()) { //
-                socket = new Socket("localhost", PORT); // Asume que el servidor está en localhost y escucha en el puerto 5555
+                socket = new Socket(ip, PORT); // Asume que el servidor está en localhost y escucha en el puerto 5555
                 out = new PrintWriter(socket.getOutputStream(), true);
             }
             in = new BufferedReader(new InputStreamReader(socket.getInputStream()));

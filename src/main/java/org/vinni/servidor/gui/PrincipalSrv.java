@@ -11,7 +11,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 /**
  * Servidor TCP con GUI en Swing.
  * Acepta MÚLTIPLES clientes al mismo tiempo (cada uno en su propio hilo)
- * y puede difundir (broadcast) mensajes a todos los clientes conectados.
+ * y puede difundir broadcast mensajes a todos los clientes conectados.
  */
 public class PrincipalSrv extends JFrame {
 
