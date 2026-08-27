@@ -1,6 +1,7 @@
 package org.vinni.cliente.gui;
 
 import javax.swing.*;
+import java.awt.*;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -75,13 +76,14 @@ public class PrincipalCli extends javax.swing.JFrame {
 
         mensajesTxt.setColumns(20);
         mensajesTxt.setRows(5);
-        mensajesTxt.setEnabled(false);
+        mensajesTxt.setFont(new java.awt.Font("Tahoma",1,12));
+        mensajesTxt.setForeground(Color.black);
+        mensajesTxt.setEditable(false);
         jScrollPane1.setViewportView(mensajesTxt);
 
         getContentPane().add(jScrollPane1);
         jScrollPane1.setBounds(30, 210, 410, 110);
-
-        mensajeTxt.setFont(new java.awt.Font("Verdana", 0, 14)); // NOI18N
+        // NOI18N
         getContentPane().add(mensajeTxt);
         mensajeTxt.setBounds(40, 120, 350, 30);
 

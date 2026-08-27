@@ -17,6 +17,7 @@ public class PrincipalSrv extends JFrame {
 
     private static final int PUERTO = 12345;
 //reorganizamos el jFRAME con una IA para que se vea un poco mejor y haya mas espacio para leer los mensajes de los clientes.
+    // por eso ya ahora no manejamos con bounds sino por "zonas"
     private JTextArea areaLog;
     private JTextField campoMensaje;
     private JButton botonEnviar;
@@ -49,12 +50,12 @@ public class PrincipalSrv extends JFrame {
 
         campoMensaje = new JTextField();
         botonEnviar = new JButton("Enviar a todos");
-        etiquetaEstado = new JLabel("Iniciando server");
-        etiquetaEstado.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
 
         JPanel panelInferior = new JPanel(new BorderLayout());
         panelInferior.add(campoMensaje, BorderLayout.CENTER);
         panelInferior.add(botonEnviar, BorderLayout.EAST);
+        etiquetaEstado = new JLabel("");
+        etiquetaEstado.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
 
         add(etiquetaEstado, BorderLayout.NORTH);
         add(scroll, BorderLayout.CENTER);
