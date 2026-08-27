@@ -1,146 +1,159 @@
 package org.vinni.servidor.gui;
 
-
 import javax.swing.*;
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
-import java.net.InetAddress;
-import java.net.ServerSocket;
-import java.net.Socket;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.io.*;
+import java.net.*;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
- * Author: Vinni
+ * Servidor TCP con GUI en Swing.
+ * Acepta MÚLTIPLES clientes al mismo tiempo (cada uno en su propio hilo)
+ * y puede difundir (broadcast) mensajes a todos los clientes conectados.
  */
-public class PrincipalSrv extends javax.swing.JFrame {
-    private final int PORT = 12345;
+public class PrincipalSrv extends JFrame {
+
+    private static final int PUERTO = 12345;
+
+    private JTextArea areaLog;
+    private JTextField campoMensaje;
+    private JButton botonEnviar;
+    private JLabel etiquetaEstado;
+
     private ServerSocket serverSocket;
-    private Socket clientSocket;
-    private BufferedReader in;
-    private PrintWriter out;
 
-    /**
-     * Creates new form Principal1
-     */
+    // Lista thread-safe: varios hilos (uno por cliente) pueden leer/escribir aquí sin
+    // provocar errores de concurrencia (ConcurrentModificationException, etc.)
+    private final List<ManejadorCliente> clientesConectados = new CopyOnWriteArrayList<>();
+
     public PrincipalSrv() {
-        initComponents();
-    }
-    @SuppressWarnings("unchecked")
-    // <editor-fold defaultstate="collapsed" desc="Generated Code">
-    private void initComponents() {
-        this.setTitle("Servidor ...");
-
-        bIniciar = new javax.swing.JButton();
-        bCerrar = new  javax.swing.JButton();
-        jLabel1 = new javax.swing.JLabel();
-        mensajesTxt = new JTextArea();
-        jScrollPane1 = new javax.swing.JScrollPane();
-
-        setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
-        getContentPane().setLayout(null);
-
-        bIniciar.setFont(new java.awt.Font("Segoe UI", 0, 18)); // NOI18N
-        bIniciar.setText("INICIAR SERVIDOR");
-        bIniciar.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                bIniciarActionPerformed(evt);
-            }
-        });
-        getContentPane().add(bIniciar);
-        bIniciar.setBounds(100, 50, 250, 40);
-
-        bCerrar.setFont(new java.awt.Font("Segoe UI", 0, 18)); // NOI18N
-        bCerrar.setText("CERRAR SERVIDOR");
-        bCerrar.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                bCerrarActionPerformed(evt);
-            }
-        });
-        getContentPane().add(bCerrar);
-        bCerrar.setBounds(100, 90, 250, 40);
-
-
-
-        jLabel1.setFont(new java.awt.Font("Tahoma", 1, 14)); // NOI18N
-        jLabel1.setForeground(new java.awt.Color(204, 0, 0));
-        jLabel1.setText("SERVIDOR TCP : HOEL");
-        getContentPane().add(jLabel1);
-        jLabel1.setBounds(150, 10, 160, 17);
-
-        mensajesTxt.setColumns(25);
-        mensajesTxt.setRows(5);
-
-        jScrollPane1.setViewportView(mensajesTxt);
-
-        getContentPane().add(jScrollPane1);
-        jScrollPane1.setBounds(20, 160, 410, 70);
-
-        setSize(new java.awt.Dimension(491, 290));
-        setLocationRelativeTo(null);
-    }// </editor-fold>
-
-    /**
-     * @param args the command line arguments
-     */
-    public static void main(String args[]) {
-        /* Create and display the form */
-        java.awt.EventQueue.invokeLater(new Runnable() {
-            public void run() {
-                new PrincipalSrv().setVisible(true);
-            }
-        });
-
-    }
-    private void bIniciarActionPerformed(java.awt.event.ActionEvent evt) {
+        super("Servidor Multicliente");
+        construirInterfaz();
         iniciarServidor();
     }
-    private void bCerrarActionPerformed(java.awt.event.ActionEvent evt) {
-        cerrarServidor();
+
+    private void construirInterfaz() {
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setSize(520, 420);
+        setLocationRelativeTo(null);
+        setLayout(new BorderLayout());
+
+        areaLog = new JTextArea();
+        areaLog.setEditable(false);
+        JScrollPane scroll = new JScrollPane(areaLog);
+
+        campoMensaje = new JTextField();
+        botonEnviar = new JButton("Enviar a todos");
+        etiquetaEstado = new JLabel("Iniciando servidor...");
+        etiquetaEstado.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
+
+        JPanel panelInferior = new JPanel(new BorderLayout());
+        panelInferior.add(campoMensaje, BorderLayout.CENTER);
+        panelInferior.add(botonEnviar, BorderLayout.EAST);
+
+        add(etiquetaEstado, BorderLayout.NORTH);
+        add(scroll, BorderLayout.CENTER);
+        add(panelInferior, BorderLayout.SOUTH);
+
+        botonEnviar.addActionListener(this::alPresionarEnviar);
+        campoMensaje.addActionListener(this::alPresionarEnviar);
+
+        setVisible(true);
     }
 
-    boolean x = true;
+    private void alPresionarEnviar(ActionEvent e) {
+        String mensaje = campoMensaje.getText().trim();
+        if (!mensaje.isEmpty()) {
+            difundirMensaje("SERVIDOR: " + mensaje);
+            campoMensaje.setText("");
+        }
+    }
 
     private void iniciarServidor() {
-        JOptionPane.showMessageDialog(this, "Iniciando servidor");
-        new Thread(new Runnable() {
-            public void run() {
-                try {
+        // Se usa un hilo aparte para que ServerSocket.accept() (que se queda "congelado"
+        // esperando conexiones) no bloquee la interfaz gráfica.
+        new Thread(() -> {
+            try {
+                serverSocket = new ServerSocket(PUERTO);
 
+                String ipLocal = InetAddress.getLocalHost().getHostAddress();
+                SwingUtilities.invokeLater(() ->
+                        etiquetaEstado.setText("Escuchando en " + ipLocal + " : " + PUERTO));
+                registrarEnLog("Servidor iniciado. Los clientes deben conectarse a "
+                        + ipLocal + ":" + PUERTO);
 
-                    InetAddress addr = InetAddress.getLocalHost();
-                    serverSocket = new ServerSocket( PORT);
-                    mensajesTxt.append("Servidor TCP en ejecución: "+ addr + " ,Puerto " + serverSocket.getLocalPort()+ "\n");
+                while (true) {
+                    Socket socketCliente = serverSocket.accept(); // espera hasta que llegue un cliente nuevo
+                    registrarEnLog("Nueva conexión desde: " + socketCliente.getInetAddress().getHostAddress());
 
-                    x = true;
-                    while (x) {
-                        clientSocket = serverSocket.accept();
-                        in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-                        String linea;
-                        out = new PrintWriter(clientSocket.getOutputStream(), true);
-                        while ((linea = in.readLine()) != null) {
-                            mensajesTxt.append("Cliente: " + linea + "\n");
-                            out.println("Mensaje recibido en el server " );
-                        }
-                    }
-
-                } catch (IOException ex) {
-                    ex.printStackTrace();
-                    mensajesTxt.append("Error en el servidor: " + ex.getMessage() + "\n");
+                    ManejadorCliente manejador = new ManejadorCliente(socketCliente);
+                    clientesConectados.add(manejador);
+                    new Thread(manejador).start(); // cada cliente vive en su propio hilo
                 }
+            } catch (IOException ex) {
+                registrarEnLog("Error en el servidor: " + ex.getMessage());
             }
         }).start();
     }
 
-    private void cerrarServidor() {
-        JOptionPane.showMessageDialog(this, "Cerrando servidor");
-        x = false;
+    private void registrarEnLog(String texto) {
+        SwingUtilities.invokeLater(() -> areaLog.append(texto + "\n"));
     }
 
-    // Variables declaration - do not modify
-    private javax.swing.JButton bIniciar;
-    private javax.swing.JButton bCerrar;
-    private javax.swing.JLabel jLabel1;
-    private javax.swing.JTextArea mensajesTxt;
-    private javax.swing.JScrollPane jScrollPane1;
+    /** Envía un mensaje a TODOS los clientes conectados actualmente. */
+    private void difundirMensaje(String mensaje) {
+        registrarEnLog(mensaje);
+        for (ManejadorCliente cliente : clientesConectados) {
+            cliente.enviar(mensaje);
+        }
+    }
+
+    /**
+     * Representa la conexión con UN cliente.
+     * Cada instancia corre en su propio hilo (implements Runnable) para poder
+     * leer sus mensajes sin bloquear a los demás clientes ni al servidor.
+     */
+    private class ManejadorCliente implements Runnable {
+        private final Socket socket;
+        private PrintWriter salida;
+        private BufferedReader entrada;
+
+        public ManejadorCliente(Socket socket) {
+            this.socket = socket;
+        }
+
+        public void enviar(String mensaje) {
+            if (salida != null) {
+                salida.println(mensaje);
+            }
+        }
+
+        @Override
+        public void run() {
+            try {
+                entrada = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+                salida = new PrintWriter(socket.getOutputStream(), true);
+
+                String lineaRecibida;
+                while ((lineaRecibida = entrada.readLine()) != null) {
+                    String mensajeCompleto = "[" + socket.getInetAddress().getHostAddress() + "]: " + lineaRecibida;
+                    difundirMensaje(mensajeCompleto); // se reenvía a TODOS los clientes, no solo al que lo mandó
+                }
+            } catch (IOException ex) {
+                registrarEnLog("Cliente desconectado: " + socket.getInetAddress().getHostAddress());
+            } finally {
+                clientesConectados.remove(this);
+                try {
+                    socket.close();
+                } catch (IOException ignored) {
+                }
+            }
+        }
+    }
+
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(PrincipalSrv::new);
+    }
 }
