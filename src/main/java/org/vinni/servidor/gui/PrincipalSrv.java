@@ -16,7 +16,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 public class PrincipalSrv extends JFrame {
 
     private static final int PUERTO = 12345;
-
+//reorganizamos el jFRAME con una IA para que se vea un poco mejor y haya mas espacio para leer los mensajes de los clientes.
     private JTextArea areaLog;
     private JTextField campoMensaje;
     private JButton botonEnviar;
@@ -27,6 +27,7 @@ public class PrincipalSrv extends JFrame {
     // Lista thread-safe: varios hilos (uno por cliente) pueden leer/escribir aquí sin
     // provocar errores de concurrencia (ConcurrentModificationException, etc.)
     private final List<ManejadorCliente> clientesConectados = new CopyOnWriteArrayList<>();
+
 
     public PrincipalSrv() {
         super("Servidor Multicliente");
